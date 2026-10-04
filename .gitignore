@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# PPP-AR 批次處理產生的本機工作檔案(資料量大,不應進版控)
+pdp3_logs/
+ppp_results_ies.csv
+*.pos
+*.??o
+*.??o.gz

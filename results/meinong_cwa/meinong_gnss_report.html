@@ -1,0 +1,603 @@
+<title>高雄美濃 GNSS 測站座標時間序列</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --accent:        #2a78d6;
+    --accent-dark:   #3987e5;
+    --series-e:       #2a78d6;
+    --series-n:       #eb6834;
+    --series-u:       #1baf7a;
+    --surface-page:   #f9f9f7;
+    --surface-card:   #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --quake:          #898781;
+    --quake-band:     rgba(137,135,129,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --series-e:       #3987e5;
+      --series-n:       #d95926;
+      --series-u:       #199e70;
+      --surface-page:   #0d0d0d;
+      --surface-card:   #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --quake:          #77756f;
+      --quake-band:     rgba(255,255,255,0.05);
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --series-e:       #3987e5;
+    --series-n:       #d95926;
+    --series-u:       #199e70;
+    --surface-page:   #0d0d0d;
+    --surface-card:   #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --quake:          #77756f;
+    --quake-band:     rgba(255,255,255,0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  .viz-root {
+    background: var(--surface-page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.55;
+    padding: 40px 20px 80px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  header.page-head {
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    font-size: 27px;
+    font-weight: 700;
+    margin: 6px 0 8px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    max-width: 65ch;
+  }
+
+  .callout {
+    margin: 24px 0 32px;
+    padding: 16px 20px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--series-u);
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .callout strong { color: var(--text-primary); }
+  .callout .callout-title {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .section-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0 0 16px;
+  }
+
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+    margin: 4px 0 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; }
+  .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .legend-item.quake .swatch {
+    width: 14px; height: 0; border-top: 2px dashed var(--quake);
+  }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+  .panel {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px 10px;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .panel-head .station-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .panel-head .station-note {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .panel svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis-tick { font-size: 10px; fill: var(--text-muted); }
+  .grid-line { stroke: var(--gridline); stroke-width: 1; }
+  .baseline-line { stroke: var(--baseline); stroke-width: 1; }
+  .quake-line { stroke: var(--quake); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .series-line { fill: none; stroke-width: 2; }
+  .series-dot { stroke: var(--surface-card); stroke-width: 1.5; cursor: pointer; }
+  .end-label { font-size: 11px; font-weight: 700; }
+
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--text-primary);
+    color: var(--surface-card);
+    font-size: 11px;
+    padding: 6px 9px;
+    border-radius: 5px;
+    line-height: 1.5;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate(-50%, -100%);
+    transition: opacity 0.1s;
+    z-index: 5;
+  }
+  .crosshair { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 2; opacity: 0; }
+
+  details.table-toggle {
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-card);
+    padding: 4px 0;
+  }
+  details.table-toggle summary {
+    cursor: pointer;
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  details.table-toggle summary::-webkit-details-marker { display: none; }
+  details.table-toggle summary::before {
+    content: "▸";
+    font-size: 11px;
+    color: var(--text-muted);
+    transition: transform 0.15s;
+  }
+  details.table-toggle[open] summary::before { transform: rotate(90deg); }
+  .table-scroll { overflow-x: auto; padding: 0 18px 16px; }
+  table.data-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12.5px;
+    min-width: 640px;
+  }
+  table.data-table th, table.data-table td {
+    padding: 6px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--gridline);
+    white-space: nowrap;
+  }
+  table.data-table th:first-child, table.data-table td:first-child,
+  table.data-table th:nth-child(2), table.data-table td:nth-child(2) {
+    text-align: left;
+  }
+  table.data-table thead th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  table.data-table tbody tr.quake-row td { color: var(--series-u); font-weight: 700; }
+
+  footer.notes {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  footer.notes p { margin: 0 0 8px; }
+</style>
+
+<div class="viz-root">
+  <div class="wrap">
+
+    <header class="page-head">
+      <span class="eyebrow">PRIDE PPP-AR · IGS2R03FIN / COD0R03FIN (ITRF2014)</span>
+      <h1>高雄美濃測站群 —— 每日座標時間序列(相對站均值位移)</h1>
+      <p class="subtitle">
+        7 個 CWA 測站、2016 年 DOY 031–037(1/31–2/6)PPP-static 解算結果，
+        已將 ECEF XYZ 換算為各測站的東(E)／北(N)／天頂(U)分量，
+        相對該測站 7 天平均位置的偏移量，單位 mm。
+      </p>
+    </header>
+
+    <div class="callout">
+      <span class="callout-title">觀察到的訊號：可能是美濃地震的同震位移</span>
+      DOY 036 → 037(即 2016-02-05 → 02-06，UTC 日界)之間，<strong>gais、lgu2、mlo1、nemn、shwa</strong>
+      五個測站同時出現數十毫米等級的位移跳動，且各站方向與大小不同(nemn 的 U 分量 +41 mm，
+      lgu2 卻是 −27 mm；gais/lgu2/mlo1 水平分量偏西南，shwa/nemn 的垂直分量卻是上升)——
+      這種「多站同時、但方向與幅度依站而異」的模式，是<strong>同震形變場</strong>的典型特徵，而不像是單一測站的硬體或多路徑問題。
+      時間點也吻合 <strong>2016 年 2 月 6 日凌晨美濃地震(M6.6，高雄美濃)</strong>的發震時刻(UTC 2/5 19:57，落在 DOY 036 當天最後幾小時)。
+      <strong>sand</strong> 測站在同一天則幾乎沒有位移，likn 的訊號較雜訊化——這與各站相對於震央/破裂面的相對位置有關，
+      值得後續用震源機制模型或其他 GNSS 站網資料交叉驗證。
+    </div>
+
+    <section>
+      <h2>各測站 E / N / U 分量</h2>
+      <p class="section-sub">灰色虛線標示 DOY 036/037 日界(美濃地震發生時間點)；縱軸尺度七站共用，方便比較振幅。</p>
+
+      <div class="legend-row">
+        <span class="legend-item"><span class="swatch" style="background:var(--series-e)"></span>East(E)</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--series-n)"></span>North(N)</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--series-u)"></span>Up(U)</span>
+        <span class="legend-item quake"><span class="swatch"></span>2016-02-06 美濃地震(DOY 036/037 日界)</span>
+      </div>
+
+      <div class="panel-grid" id="panelGrid"></div>
+    </section>
+
+    <section>
+      <h2>座標框架轉換：ITRF2014 → ITRF2020</h2>
+      <p class="section-sub">
+        本次解算用的 IGS repro3 產品對齊在 ITRF2014(IGb14)，若要跟 2023 年後用 WUM0MGXRAP 產品解出的
+        ITRF2020 座標放在同一個時間序列比較，需要做框架轉換。
+      </p>
+      <div class="callout" style="border-left-color:var(--series-e)">
+        <span class="callout-title">官方轉換參數(IERS / IGN ITRF2020 技術文件)</span>
+        ITRF2020 → ITRF2014 @ 2015.0：T = (−1.4, −0.9, +1.4) mm，尺度 D = −0.42 ppb，旋轉 R = 0；
+        速率：Ṫ = (0.0, −0.1, +0.2) mm/yr，Ḋ = 0 ppb/yr，Ṙ = 0。
+        <br>來源：
+        <a href="https://itrf.ign.fr/docs/solutions/itrf2020/Transfo-ITRF2020_TRFs.txt" target="_blank" rel="noopener" style="color:inherit">itrf.ign.fr/docs/solutions/itrf2020/Transfo-ITRF2020_TRFs.txt</a>
+        <br><br>
+        本資料集是 ITRF2014，所以套用的是<strong>反向</strong>參數(平移、尺度反號；旋轉本來就是 0，不受影響)。
+        實際套用到這 47 筆 2016 年 DOY 031–037 的解算結果後，換算到站心 ENU 分量，
+        <strong>各測站、各天的平移量幾乎完全相同</strong>(E ≈ −1.72 mm，N ≈ −1.56 mm，U ≈ +2.19 mm，
+        47 筆資料彼此差異 &lt; 0.01 mm)——因為測站彼此相距僅數十公里，尺度項造成的站間差異可忽略，
+        平移項本身在同一年也幾乎不隨時間變化。
+        <br><br>
+        <strong>結論：</strong>ITRF2014 → ITRF2020 對這批資料而言等同於對整個測站網套用一個約 2–3 mm 的
+        <strong>常數平移</strong>，<strong>完全不影響</strong>測站間的相對位置或本報告觀察到的同震位移訊號
+        (那些訊號是幾十毫米量級)；但如果要跟 ITRF2020 系統的其他資料做「絕對座標」比對，這個轉換仍是必要的。
+        完整逐筆轉換結果(含 X/Y/Z ITRF2020 座標)已輸出成
+        <code class="mono">results_itrf2020.csv</code>。
+      </div>
+    </section>
+
+    <details class="table-toggle">
+      <summary>顯示完整數值表(ENU mm ／ ECEF XYZ ／ 經緯度)</summary>
+      <div class="table-scroll">
+        <table class="data-table mono" id="dataTable">
+          <thead>
+            <tr>
+              <th>測站</th><th>日期</th><th>DOY</th>
+              <th>E (mm)</th><th>N (mm)</th><th>U (mm)</th>
+              <th>X (m)</th><th>Y (m)</th><th>Z (m)</th>
+              <th>緯度</th><th>經度</th><th>橢球高 (m)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+
+    <footer class="notes">
+      <p>座標系統：IGS2R03FIN(軌道/鐘差/姿態/偏差)+ COD0R03FIN(ERP)，IGS repro3 最終合併產品，對齊 ITRF2014(IGb14 realization)。</p>
+      <p>解算參數：<code class="mono">pdp3 -m S -sys GR -frq G12 R12</code>(GPS+GLONASS 雙頻，PPP-static，模糊度固定)。</p>
+      <p>E/N/U 位移為相對「該測站 7 天座標平均值」的偏移，僅用於觀察站內逐日變化，非絕對定位精度指標。</p>
+    </footer>
+
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // 每個測站 7 天 (缺測的 doy 直接省略，折線會跳過該點)
+  const DATA = {
+    gais: [
+      {doy:31,e:3.13,n:2.68,u:-0.52},{doy:32,e:4.02,n:1.95,u:2.22},
+      {doy:33,e:3.03,n:2.77,u:7.51},{doy:34,e:4.57,n:3.05,u:6.60},
+      {doy:35,e:4.96,n:2.58,u:3.65},{doy:36,e:2.92,n:2.78,u:-1.08},
+      {doy:37,e:-22.63,n:-15.80,u:-18.38}
+    ],
+    lgu2: [
+      {doy:33,e:7.77,n:0.96,u:10.17},{doy:34,e:8.55,n:1.62,u:9.52},
+      {doy:35,e:10.46,n:2.89,u:9.90},{doy:36,e:2.08,n:2.38,u:-3.02},
+      {doy:37,e:-28.86,n:-7.85,u:-26.57}
+    ],
+    likn: [
+      {doy:31,e:-1.29,n:2.90,u:-12.27},{doy:32,e:-0.74,n:-1.30,u:5.33},
+      {doy:33,e:-1.76,n:0.65,u:-4.95},{doy:34,e:2.00,n:-0.24,u:6.51},
+      {doy:35,e:3.53,n:1.11,u:-5.33},{doy:36,e:0.65,n:0.26,u:-2.60},
+      {doy:37,e:-2.39,n:-3.37,u:13.33}
+    ],
+    mlo1: [
+      {doy:31,e:1.20,n:-0.82,u:-0.90},{doy:32,e:2.82,n:-1.47,u:6.26},
+      {doy:33,e:2.18,n:1.08,u:8.60},{doy:34,e:3.04,n:0.04,u:2.94},
+      {doy:35,e:3.89,n:-1.48,u:-4.28},{doy:36,e:0.00,n:0.10,u:1.22},
+      {doy:37,e:-13.13,n:2.56,u:-13.82}
+    ],
+    nemn: [
+      {doy:31,e:3.11,n:4.91,u:-9.97},{doy:32,e:3.59,n:4.53,u:-3.57},
+      {doy:33,e:4.37,n:4.12,u:-8.10},{doy:34,e:4.38,n:4.48,u:-7.18},
+      {doy:35,e:5.52,n:3.94,u:-6.41},{doy:36,e:1.16,n:1.71,u:-5.85},
+      {doy:37,e:-22.12,n:-23.68,u:41.08}
+    ],
+    sand: [
+      {doy:31,e:-0.76,n:0.83,u:2.15},{doy:32,e:0.26,n:-1.36,u:2.08},
+      {doy:33,e:0.40,n:0.30,u:3.73},{doy:34,e:2.11,n:-0.11,u:2.44},
+      {doy:35,e:0.23,n:1.18,u:-8.32},{doy:36,e:-0.78,n:0.13,u:1.76},
+      {doy:37,e:-1.45,n:-0.97,u:-3.84}
+    ],
+    shwa: [
+      {doy:31,e:-1.18,n:1.93,u:-6.83},{doy:32,e:1.08,n:-0.08,u:-6.17},
+      {doy:33,e:0.74,n:1.26,u:-4.53},{doy:34,e:1.13,n:0.65,u:-3.30},
+      {doy:35,e:0.73,n:1.55,u:-5.99},{doy:36,e:0.58,n:0.26,u:-4.21},
+      {doy:37,e:-3.08,n:-5.58,u:31.02}
+    ]
+  };
+
+  // 對應的 ECEF / 經緯度 (station -> doy -> {x,y,z,lat,lon,h})
+  const GEO = {
+    gais:{31:{x:-2987712.52447,y:5053834.09460,z:2485024.80561,lat:23.08029194,lon:120.59062011,h:313.4506},
+          32:{x:-2987712.52666,y:5053834.09656,z:2485024.80602,lat:23.08029193,lon:120.59062011,h:313.4533},
+          33:{x:-2987712.52812,y:5053834.10098,z:2485024.80884,lat:23.08029194,lon:120.59062010,h:313.4586},
+          34:{x:-2987712.52896,y:5053834.09938,z:2485024.80874,lat:23.08029194,lon:120.59062012,h:313.4577},
+          35:{x:-2987712.52801,y:5053834.09700,z:2485024.80715,lat:23.08029194,lon:120.59062012,h:313.4547},
+          36:{x:-2987712.52400,y:5053834.09423,z:2485024.80549,lat:23.08029194,lon:120.59062010,h:313.4500},
+          37:{x:-2987712.49761,y:5053834.09980,z:2485024.78161,lat:23.08029177,lon:120.59061985,h:313.4327}},
+    lgu2:{33:{x:-2993523.95499,y:5054729.70127,z:2476199.76100,lat:22.99378186,lon:120.63496583,h:292.6684},
+          34:{x:-2993523.95522,y:5054729.70013,z:2476199.76136,lat:22.99378186,lon:120.63496583,h:292.6677},
+          35:{x:-2993523.95679,y:5054729.69904,z:2476199.76268,lat:22.99378187,lon:120.63496585,h:292.6681},
+          36:{x:-2993523.94362,y:5054729.69325,z:2476199.75716,lat:22.99378187,lon:120.63496577,h:292.6552},
+          37:{x:-2993523.90799,y:5054729.69379,z:2476199.73854,lat:22.99378178,lon:120.63496547,h:292.6316}},
+    likn:{31:{x:-2989109.27750,y:5068853.46183,z:2452115.05568,lat:22.75861118,lon:120.52790644,h:63.4701},
+          32:{x:-2989109.28704,y:5068853.47693,z:2452115.05862,lat:22.75861115,lon:120.52790644,h:63.4877},
+          33:{x:-2989109.28097,y:5068853.46863,z:2452115.05644,lat:22.75861116,lon:120.52790643,h:63.4774},
+          34:{x:-2989109.28975,y:5068853.47612,z:2452115.06005,lat:22.75861116,lon:120.52790647,h:63.4889},
+          35:{x:-2989109.28526,y:5068853.46549,z:2452115.05672,lat:22.75861117,lon:120.52790648,h:63.4771},
+          36:{x:-2989109.28422,y:5068853.46941,z:2452115.05699,lat:22.75861116,lon:120.52790646,h:63.4798},
+          37:{x:-2989109.28978,y:5068853.48481,z:2452115.05980,lat:22.75861113,lon:120.52790643,h:63.4957}},
+    mlo1:{31:{x:-2988319.74439,y:5062280.66926,z:2466546.38595,lat:22.89995560,lon:120.55381906,h:75.3789},
+          32:{x:-2988319.74927,y:5062280.67433,z:2466546.38814,lat:22.89995560,lon:120.55381907,h:75.3860},
+          33:{x:-2988319.74931,y:5062280.67566,z:2466546.39140,lat:22.89995562,lon:120.55381907,h:75.3884},
+          34:{x:-2988319.74761,y:5062280.67108,z:2466546.38824,lat:22.89995561,lon:120.55381908,h:75.3827},
+          35:{x:-2988319.74526,y:5062280.66543,z:2466546.38403,lat:22.89995560,lon:120.55381909,h:75.3755},
+          36:{x:-2988319.74417,y:5062280.67124,z:2466546.38763,lat:22.89995561,lon:120.55381905,h:75.3810},
+          37:{x:-2988319.72533,y:5062280.66516,z:2466546.38404,lat:22.89995563,lon:120.55381892,h:75.3660}},
+    nemn:{31:{x:-2976330.88789,y:5068961.84270,z:2467391.05801,lat:22.90812359,lon:120.42008153,h:104.7525},
+          32:{x:-2976330.89137,y:5068961.84767,z:2467391.06015,lat:22.90812358,lon:120.42008153,h:104.7589},
+          33:{x:-2976330.89001,y:5068961.84382,z:2467391.05801,lat:22.90812358,lon:120.42008154,h:104.7544},
+          34:{x:-2976330.89037,y:5068961.84442,z:2467391.05870,lat:22.90812358,lon:120.42008154,h:104.7553},
+          35:{x:-2976330.89182,y:5068961.84464,z:2467391.05850,lat:22.90812358,lon:120.42008155,h:104.7561},
+          36:{x:-2976330.88876,y:5068961.84804,z:2467391.05667,lat:22.90812356,lon:120.42008151,h:104.7567},
+          37:{x:-2976330.89558,y:5068961.90563,z:2467391.05155,lat:22.90812333,lon:120.42008128,h:104.8036}},
+    sand:{31:{x:-3000044.82520,y:5064595.49650,z:2447946.67299,lat:22.71727019,lon:120.64064513,h:203.2359},
+          32:{x:-3000044.82648,y:5064595.49666,z:2447946.67094,lat:22.71727017,lon:120.64064514,h:203.2358},
+          33:{x:-3000044.82705,y:5064595.49734,z:2447946.67311,lat:22.71727019,lon:120.64064514,h:203.2375},
+          34:{x:-3000044.82800,y:5064595.49558,z:2447946.67223,lat:22.71727019,lon:120.64064515,h:203.2362},
+          35:{x:-3000044.82106,y:5064595.48757,z:2447946.66927,lat:22.71727020,lon:120.64064514,h:203.2254},
+          36:{x:-3000044.82514,y:5064595.49644,z:2447946.67219,lat:22.71727019,lon:120.64064513,h:203.2355},
+          37:{x:-3000044.82215,y:5064595.49270,z:2447946.66902,lat:22.71727018,lon:120.64064512,h:203.2299}},
+    shwa:{31:{x:-2967454.13218,y:5068474.75434,z:2478939.03264,lat:23.02143273,lon:120.34781267,h:89.5284},
+          32:{x:-2967454.13484,y:5068474.75440,z:2478939.03105,lat:23.02143271,lon:120.34781269,h:89.5290},
+          33:{x:-2967454.13504,y:5068474.75543,z:2478939.03292,lat:23.02143272,lon:120.34781269,h:89.5307},
+          34:{x:-2967454.13607,y:5068474.75641,z:2478939.03284,lat:23.02143272,lon:120.34781269,h:89.5319},
+          35:{x:-2967454.13429,y:5068474.75417,z:2478939.03262,lat:23.02143272,lon:120.34781269,h:89.5292},
+          36:{x:-2967454.13525,y:5068474.75610,z:2478939.03213,lat:23.02143271,lon:120.34781269,h:89.5310},
+          37:{x:-2967454.14963,y:5068474.78790,z:2478939.04053,lat:23.02143266,lon:120.34781265,h:89.5662}}
+  };
+
+  const STATIONS = ["gais","lgu2","likn","mlo1","nemn","sand","shwa"];
+  const X_MIN = 31, X_MAX = 37;
+
+  // 共用 Y 軸範圍 (取所有站所有分量的 min/max，並留邊界)
+  let yMin = Infinity, yMax = -Infinity;
+  Object.values(DATA).forEach(recs => recs.forEach(r => {
+    [r.e, r.n, r.u].forEach(v => { if (v < yMin) yMin = v; if (v > yMax) yMax = v; });
+  }));
+  const pad = (yMax - yMin) * 0.12;
+  yMin = Math.floor((yMin - pad) / 5) * 5;
+  yMax = Math.ceil((yMax + pad) / 5) * 5;
+
+  const W = 380, H = 190, ML = 34, MR = 30, MT = 10, MB = 22;
+  const plotW = W - ML - MR, plotH = H - MT - MB;
+
+  function xPix(doy) { return ML + (doy - X_MIN) / (X_MAX - X_MIN) * plotW; }
+  function yPix(v) { return MT + (yMax - v) / (yMax - yMin) * plotH; }
+
+  const svgns = "http://www.w3.org/2000/svg";
+  function el(tag, attrs) {
+    const e = document.createElementNS(svgns, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  const tooltip = document.getElementById("tooltip");
+
+  function niceYTicks() {
+    const ticks = [];
+    const step = (yMax - yMin) / 4;
+    for (let i = 0; i <= 4; i++) ticks.push(Math.round(yMin + step * i));
+    return [...new Set(ticks)];
+  }
+
+  function buildPanel(station) {
+    const recs = DATA[station];
+    const panel = document.createElement("div");
+    panel.className = "panel";
+
+    const head = document.createElement("div");
+    head.className = "panel-head";
+    head.innerHTML = `<span class="station-name">${station.toUpperCase()}</span>` +
+                      `<span class="station-note">${recs.length} 天資料</span>`;
+    panel.appendChild(head);
+
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": `${station} 測站 East/North/Up 位移時間序列` });
+
+    // gridlines
+    niceYTicks().forEach(t => {
+      const y = yPix(t);
+      svg.appendChild(el("line", { x1: ML, x2: W - MR, y1: y, y2: y,
+        class: t === 0 ? "baseline-line" : "grid-line" }));
+      const lab = el("text", { x: ML - 6, y: y + 3, class: "axis-tick", "text-anchor": "end" });
+      lab.textContent = t;
+      svg.appendChild(lab);
+    });
+
+    // x ticks (doy)
+    for (let d = X_MIN; d <= X_MAX; d++) {
+      const x = xPix(d);
+      const lab = el("text", { x: x, y: H - 6, class: "axis-tick", "text-anchor": "middle" });
+      lab.textContent = d;
+      svg.appendChild(lab);
+    }
+
+    // quake boundary line at doy 36.5
+    const qx = xPix(36.5);
+    svg.appendChild(el("line", { x1: qx, x2: qx, y1: MT, y2: H - MB, class: "quake-line" }));
+
+    // series
+    const series = [
+      { key: "e", color: "var(--series-e)", label: "E" },
+      { key: "n", color: "var(--series-n)", label: "N" },
+      { key: "u", color: "var(--series-u)", label: "U" }
+    ];
+
+    series.forEach(s => {
+      const pts = recs.map(r => `${xPix(r.doy)},${yPix(r[s.key])}`).join(" ");
+      svg.appendChild(el("polyline", { points: pts, class: "series-line", style: `stroke:${s.color}` }));
+      recs.forEach(r => {
+        svg.appendChild(el("circle", { cx: xPix(r.doy), cy: yPix(r[s.key]), r: 3.2,
+          class: "series-dot", style: `fill:${s.color}`,
+          "data-doy": r.doy, "data-station": station }));
+      });
+      const last = recs[recs.length - 1];
+      const lab = el("text", { x: xPix(last.doy) + 5, y: yPix(last[s.key]) + 3,
+        class: "end-label", style: `fill:${s.color}` });
+      lab.textContent = s.label;
+      svg.appendChild(lab);
+    });
+
+    // crosshair
+    const crosshair = el("line", { x1: 0, x2: 0, y1: MT, y2: H - MB, class: "crosshair" });
+    svg.appendChild(crosshair);
+
+    // hover layer
+    const hoverRect = el("rect", { x: ML, y: MT, width: plotW, height: plotH, fill: "transparent" });
+    svg.appendChild(hoverRect);
+
+    hoverRect.addEventListener("mousemove", (ev) => {
+      const rect = svg.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const mx = (ev.clientX - rect.left) * scaleX;
+      const doyFloat = X_MIN + (mx - ML) / plotW * (X_MAX - X_MIN);
+      let nearest = recs[0], best = Infinity;
+      recs.forEach(r => { const d = Math.abs(r.doy - doyFloat); if (d < best) { best = d; nearest = r; } });
+      crosshair.setAttribute("x1", xPix(nearest.doy));
+      crosshair.setAttribute("x2", xPix(nearest.doy));
+      crosshair.style.opacity = 1;
+
+      tooltip.style.opacity = 1;
+      tooltip.style.left = (ev.clientX) + "px";
+      tooltip.style.top = (rect.top + window.scrollY - 8) + "px";
+      tooltip.innerHTML = `<b>${station.toUpperCase()} · DOY ${nearest.doy}</b><br>` +
+        `E ${nearest.e.toFixed(2)} mm<br>N ${nearest.n.toFixed(2)} mm<br>U ${nearest.u.toFixed(2)} mm`;
+    });
+    hoverRect.addEventListener("mouseleave", () => {
+      crosshair.style.opacity = 0;
+      tooltip.style.opacity = 0;
+    });
+
+    panel.appendChild(svg);
+    return panel;
+  }
+
+  const grid = document.getElementById("panelGrid");
+  STATIONS.forEach(st => grid.appendChild(buildPanel(st)));
+
+  // data table
+  const tbody = document.querySelector("#dataTable tbody");
+  const doyToDate = (doy) => {
+    const d = new Date(Date.UTC(2016, 0, 1));
+    d.setUTCDate(d.getUTCDate() + doy - 1);
+    return d.toISOString().slice(0, 10);
+  };
+  STATIONS.forEach(station => {
+    DATA[station].forEach(r => {
+      const g = (GEO[station] && GEO[station][r.doy]) || {};
+      const tr = document.createElement("tr");
+      if (r.doy === 37) tr.className = "quake-row";
+      tr.innerHTML = `<td>${station}</td><td>${doyToDate(r.doy)}</td><td>${r.doy}</td>` +
+        `<td>${r.e.toFixed(2)}</td><td>${r.n.toFixed(2)}</td><td>${r.u.toFixed(2)}</td>` +
+        `<td>${g.x !== undefined ? g.x.toFixed(3) : "—"}</td>` +
+        `<td>${g.y !== undefined ? g.y.toFixed(3) : "—"}</td>` +
+        `<td>${g.z !== undefined ? g.z.toFixed(3) : "—"}</td>` +
+        `<td>${g.lat !== undefined ? g.lat.toFixed(6) : "—"}</td>` +
+        `<td>${g.lon !== undefined ? g.lon.toFixed(6) : "—"}</td>` +
+        `<td>${g.h !== undefined ? g.h.toFixed(2) : "—"}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+})();
+</script>
